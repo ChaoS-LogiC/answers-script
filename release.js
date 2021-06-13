@@ -61,11 +61,11 @@
                     case "multichoice":
                     case "truefalse":
                     case "shortanswer":
+                    case "multichoice_checkbox": 
                         let inputElements = $(questions[i]).find('.answer :input');
                         console.log(inputElements)
                         for (let j = 0; j < inputElements.length; j++) {
-                            inputElements.on('change', function () {
-                                console.log(j);
+                            $(inputElements[j]).on('change', function () {
                                 onAnswerChange($(this));
                             })
                         }
