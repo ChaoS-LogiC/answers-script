@@ -303,7 +303,8 @@
                 const innerImages = $(questions[i]).find('.qtext > p > img');
                 if (innerImages.length > 0) {
                     for (let index = 0; index < innerImages.length; index++) {
-                        text += " " + innerImages[index].currentSrc;
+                        let image = innerImages[index].currentSrc.split('/')
+                        text += " " + decodeURI(image[image.length - 1]);
                     }
                 }
                 textsList.push(text);
