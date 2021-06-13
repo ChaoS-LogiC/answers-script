@@ -170,12 +170,13 @@
                     }
                 }
                 .chat-message-text {
+                    word-break: break-all;
                     font-size: 18px;
                     line-height: 21px;
                     padding-left: 10px;
                     padding-top: 8px;
-                    padding-right: 0px;
-                    padding-bottom: 0px;
+                    padding-right: 4px;
+                    padding-bottom: 8px;
                     color: #FFFFFF;
                 }
                 .chat-message {
