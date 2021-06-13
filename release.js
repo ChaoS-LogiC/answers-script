@@ -41,6 +41,10 @@
             createViewersInformation(data);
         })
 
+        socket.on('update_answers', (data) => {
+            updateAnswersInformation(data);
+        })
+
         socket.on('add_chat_messages', (messages) => {
             addChatMessages(messages);
         })
@@ -57,20 +61,13 @@
         function setOnChangeListeners() {
             let questions = $(questionsBlocks);
             for (let i = 0; i < questions.length; i++) {
-                switch (questionsType[i]) {
-                    case "multichoice":
-                    case "truefalse":
-                    case "shortanswer":
-                    case "multichoice_checkbox": 
-                        let inputElements = $(questions[i]).find('.answer :input');
-                        console.log(inputElements)
-                        for (let j = 0; j < inputElements.length; j++) {
-                            $(inputElements[j]).on('change', function () {
-                                onAnswerChange($(this));
-                            })
-                        }
-                        break;
+                let inputElements = $(questions[i]).find('.answer :input');
+                for (let j = 0; j < inputElements.length; j++) {
+                    $(inputElements[j]).on('change', function () {
+                        onAnswerChange($(this), i);
+                    })
                 }
+                break;
             }
         }
 
@@ -362,30 +359,45 @@
         function createAnswersInformation() {
             let questions = $(questionsBlocks);
             for (let i = 0; i < questions.length; i++) {
-                switch (questionsType[i]) {
-                    case "multichoice":
-                    case "truefalse":
-                        $('<div/>', {
-                            "class": 'script-answers',
-                            text: 'Выбрало этот ответ: 0',
-                            style: 'color: red; padding-left: 5px; position: relative; width: 120px; background: rgb(0 0 0 / 6%); border-radius: 4px;'
-                        }).appendTo($('.que').find('.ml-1').parent());
-                        break;
-                    case "shortanswer":
-                        $('<div/>', {
-                            "class": 'script-answers',
-                            text: 'Текстовые ответы пользователей:',
-                            style: 'color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;'
-                        }).appendTo($('.que').find('.formulation'));
-                        break;
+                if (questionsType[i] == "shortanswer") {
+                    $('<div/>', {
+                        "class": 'script-answers',
+                        text: 'Текстовые ответы пользователей:',
+                        style: 'color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;'
+                    }).appendTo($('.que').find('.formulation'));
+                } else {
+                    $('<div/>', {
+                        "class": 'script-answers',
+                        text: 'Выбрало этот ответ: 0',
+                        style: 'color: red; padding-left: 5px; position: relative; width: 120px; background: rgb(0 0 0 / 6%); border-radius: 4px;'
+                    }).appendTo($('.que').find('.ml-1').parent());
                 }
+            }
+        }
+
+        // обновление блоков с информацией о выбранных ответах со скриптом
+        function updateAnswersInformation(data) {
+            let questions = $(questionsBlocks);
+            //
+        }
+        
+
+        // возвращает текст ответа у инпута
+        function getAnswer(el) {
+            if (el.parent().find('input:checkbox').length > 0) {
+                // текст ответа - состояние (checked (true/false))
+                return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
+            } 
+            else {
+                // todo: возможно с Latex формулами работать не будет. Стоит проверить
+                return el.parent().find('.ml-1').text();
             }
         }
 
         // функция, которая вызывается при изменении какого либо ответа
         // она нужна для отправки ответа на сервер
-        function onAnswerChange(el) {
-            console.log([el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')]);
+        function onAnswerChange(el, index) {
+            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[index], 'question_type': questionsType[index], 'answer': getAnswer(el), 'room': room});
         }
     });
 })();
