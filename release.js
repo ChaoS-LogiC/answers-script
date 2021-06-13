@@ -14,6 +14,66 @@
 
 (function () {
     $(document).ready(function () {
+        // match - вопрос на соответствие, 
+        // multichoice - вопрос с множественными вариантами ответов,
+        // multichoice_checkbox - множество вариантов, ответить можно несколько
+        // shortanswer - вписать короткий ответ, 
+        // truefalse - вопрос на верно/неверно
+        var questionsBlocks = '.que';
+        const questionsType = getQuestionsType();
+        const questionsText = getQuestionsText();
+        const userInfo = getUserInfo();
+        // в качестве названия комнаты будем использовать первый вопрос
+        const room = CryptoJS.SHA256(questionsText[0]).toString();
+        createChat();
+
+        var socket = io.connect('127.0.0.1:5000')
+
+        socket.on('connect', () => {
+            socket.emit('join', room);
+
+            // отправка запроса для счётчика просмотров и создания нового вопроса
+            socket.emit('view_question', { 'data': { 'questions': questionsText, 'user_info': userInfo, 'room': room } });
+            socket.emit('get_chat', room);
+        })
+
+        socket.on('update_viewers', (data) => {
+            createViewersInformation(data);
+        })
+
+        socket.on('add_chat_messages', (messages) => {
+            addChatMessages(messages);
+        })
+
+        createAnswersInformation();
+        setOnChangeListeners();
+
+        console.info('blocks: ', questionsBlocks);
+        console.info('types: ', questionsType);
+        console.info('text: ', questionsText);
+        console.info('user info: ', userInfo);
+
+        // добавляет ко всем инпутам колбэк функцию на изменение
+        function setOnChangeListeners() {
+            let questions = $(questionsBlocks);
+            for (let i = 0; i < questions.length; i++) {
+                switch (questionsType[i]) {
+                    case "multichoice":
+                    case "truefalse":
+                    case "shortanswer":
+                        let inputElements = $(questions[i]).find('.answer :input');
+                        console.log(inputElements)
+                        for (let j = 0; j < inputElements.length; j++) {
+                            inputElements.on('change', function () {
+                                console.log(j);
+                                onAnswerChange($(this));
+                            })
+                        }
+                        break;
+                }
+            }
+        }
+
         // создание чата
         function createChat() {
             const chatInnerHTML = `
@@ -211,8 +271,14 @@
             let typesList = [];
             let questions = $(questionsBlocks);
             for (let i = 0; i < questions.length; i++) {
-                typesList.push(questions[i].classList[1]);
-
+                // для чекбоксов отдельный тип, т.к. придётся передавать помимо варианта ответа
+                // ещё и состояние чекбокса
+                if ($($(questions[i]).find('div.answer')).find('input:checkbox').length > 0) {
+                    typesList.push(questions[i].classList[1] + '_checkbox');
+                }
+                else {
+                    typesList.push(questions[i].classList[1]);
+                }
             }
 
             return typesList;
@@ -245,6 +311,9 @@
             return textsList;
         }
 
+        // добавляет сообщения в чат
+        // параметр message - список сообщений. 
+        // Пример: [{'user': 'Max', 'user_info': 'qwr1wt1g233', 'text': 'тестовое сообщение'}, ...]
         function addChatMessages(messages) {
             let chatMessages = $('#chat-messages')
 
@@ -293,6 +362,7 @@
             for (let i = 0; i < questions.length; i++) {
                 switch (questionsType[i]) {
                     case "multichoice":
+                    case "truefalse":
                         $('<div/>', {
                             "class": 'script-answers',
                             text: 'Выбрало этот ответ: 0',
@@ -309,41 +379,11 @@
                 }
             }
         }
-        // match - вопрос на соответствие, 
-        // multichoice - вопрос с множественными вариантами ответов,
-        // shortanswer - вписать короткий ответ, 
-        // truefalse - вопрос на верно/неверно
-        var questionsBlocks = '.que';
-        const questionsType = getQuestionsType();
-        const questionsText = getQuestionsText();
-        const userInfo = getUserInfo();
-        // в качестве названия комнаты будем использовать первый вопрос
-        const room = CryptoJS.SHA256(questionsText[0]).toString();
-        createChat();
 
-        var socket = io.connect('127.0.0.1:5000')
-
-        socket.on('connect', () => {
-            socket.emit('join', room);
-
-            // отправка запроса для счётчика просмотров и создания нового вопроса
-            socket.emit('view_question', { 'data': { 'questions': questionsText, 'user_info': userInfo, 'room': room } });
-            socket.emit('get_chat', room);
-        })
-
-        socket.on('update_viewers', (data) => {
-            createViewersInformation(data);
-        })
-
-        socket.on('add_chat_messages', (messages) => {
-            addChatMessages(messages);
-        })
-
-        createAnswersInformation();
-
-        console.info('blocks: ', questionsBlocks);
-        console.info('types: ', questionsType);
-        console.info('text: ', questionsText);
-        console.info('user info: ', userInfo);
+        // функция, которая вызывается при изменении какого либо ответа
+        // она нужна для отправки ответа на сервер
+        function onAnswerChange(el) {
+            console.log([el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')]);
+        }
     });
 })();
