@@ -221,6 +221,7 @@
                 d.scrollTop(d.prop("scrollHeight"));
             });
         }
+
         // получение хэша имени юзера
         function getUserInfo() {
             return CryptoJS.SHA256($('.usertext').text()).toString();
@@ -229,8 +230,9 @@
         // получение списка всех типов вопросов со страницы
         function getQuestionsType() {
             let typesList = [];
-            for (let i = 0; i < questionsBlocks.length; i++) {
-                typesList.push(questionsBlocks[i].classList[1]);
+            let questions = $(questionsBlocks);
+            for (let i = 0; i < questions.length; i++) {
+                typesList.push(questions[i].classList[1]);
 
             }
 
@@ -240,18 +242,19 @@
         // получение списка текстов всех вопросов со страницы
         function getQuestionsText() {
             let textsList = [];
-            for (let i = 0; i < questionsBlocks.length; i++) {
+            let questions = $(questionsBlocks);
+            for (let i = 0; i < questions.length; i++) {
                 let text;
-                if ($(questionsBlocks[i]).find('.filter_mathjaxloader_equation').length > 0) {
-                    text = $(questionsBlocks[i]).find('.filter_mathjaxloader_equation').text();
+                if ($(questions[i]).find('.filter_mathjaxloader_equation').length > 0) {
+                    text = $(questions[i]).find('.filter_mathjaxloader_equation').text();
                 }
                 else {
-                    text = $(questionsBlocks[i]).find('.qtext > p').text();
+                    text = $(questions[i]).find('.qtext > p').text();
                 }
 
                 // возможно такое, что текст вопроса будет одинаковый, но картинки
                 // у вопроса различаются. Добавим на всякий случай src от img
-                const innerImages = $(questionsBlocks[i]).find('.qtext > p > img');
+                const innerImages = $(questions[i]).find('.qtext > p > img');
                 if (innerImages.length > 0) {
                     for (let index = 0; index < innerImages.length; index++) {
                         text += " " + innerImages[index].currentSrc;
@@ -304,11 +307,34 @@
                 }
             }
         }
+
+        // вставка блоков с информацией о выбранных ответах со скриптом
+        function createAnswersInformation() {
+            let questions = $(questionsBlocks);
+            for (let i = 0; i < questions.length; i++) {
+                switch (questionsType[i]) {
+                    case "multichoice":
+                        $('<div/>', {
+                            "class": 'script-answers',
+                            text: 'Выбрало этот ответ: 0',
+                            style: 'color: red; padding-left: 5px; position: relative; width: 120px; background: rgb(0 0 0 / 6%); border-radius: 4px;'
+                        }).appendTo($('.que').find('.ml-1').parent());
+                        break;
+                    case "shortanswer":
+                        $('<div/>', {
+                            "class": 'script-answers',
+                            text: 'Текстовые ответы пользователей:',
+                            style: 'color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;'
+                        }).appendTo($('.que').find('.formulation'));
+                        break;
+                }
+            }
+        }
         // match - вопрос на соответствие, 
-        // multichoice - вопрос с множественными вариантами ответов, 
+        // multichoice - вопрос с множественными вариантами ответов,
         // shortanswer - вписать короткий ответ, 
         // truefalse - вопрос на верно/неверно
-        var questionsBlocks = $('.que');
+        var questionsBlocks = '.que';
         const questionsType = getQuestionsType();
         const questionsText = getQuestionsText();
         const userInfo = getUserInfo();
@@ -333,6 +359,8 @@
         socket.on('add_chat_messages', (messages) => {
             addChatMessages(messages);
         })
+
+        createAnswersInformation();
 
         console.info('blocks: ', questionsBlocks);
         console.info('types: ', questionsType);
