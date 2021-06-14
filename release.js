@@ -19,6 +19,7 @@
         // multichoice - вопрос с множественными вариантами ответов,
         // multichoice_checkbox - множество вариантов, ответить можно несколько
         // shortanswer - вписать короткий ответ, 
+        // numerical - коротки ответ в виде числа,
         // truefalse - вопрос на верно/неверно
         var questionsBlocks = '.que';
         const questionsType = getQuestionsType();
@@ -71,6 +72,7 @@
         function createApprovalButtons() {
             GM_addStyle(`
               .approval-btn-group {
+                display: flex;
                 margin-right: 5px;
                 float: right;
                 clear: both;
@@ -94,11 +96,12 @@
             </div>
             `
             for (let i = 0; i < questions.length; i++) {
-                if(questionsType[i] != 'shortanswer'){
+                if(questionsType[i] != 'shortanswer' && questionsType[i] != 'numerical'){
                     let inputElements = $(questions[i]).find('.script-answers');
                     for (let j = 0; j < inputElements.length; j++) {
-                        $(inputElements[j]).append(buttonsHtml);
-                        $($(inputElements[j]).parent().find('.approval-span-btn')).on('click', function () {
+                        $(inputElements[j]).parent().parent().append(buttonsHtml);
+                        let clickElement = $($(inputElements[j]).parent().parent().find('.approval-span-btn'));
+                        clickElement.on('click', function () {
                             approvalAnswers($(this), i, j);
                         })
                     }
@@ -421,18 +424,18 @@
         function createAnswersInformation() {
             let questions = $(questionsBlocks);
             for (let i = 0; i < questions.length; i++) {
-                if (questionsType[i] == "shortanswer") {
+                if (questionsType[i] == "shortanswer" || questionsType[i] == "numerical") {
                     $('<div/>', {
                         "class": 'script-answers',
                         text: 'Текстовые ответы пользователей:',
                         style: 'color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;'
-                    }).appendTo($('.que').find('.formulation'));
+                    }).appendTo($($(questionsBlocks)[i]).find('.formulation'));
                 } else {
                     let htmlContent = `
-                    <div class="script-answers" style="padding-left: 5px; position: relative; display: inline-flex; background: rgb(0 0 0 / 6%); border-radius: 4px; font-size: 15px;">
+                    <div class="script-answers" style="padding-left: 5px; position: relative; display: inline-flex; background: rgb(0 0 0 / 6%); border-radius: 4px; font-size: 15px; max-height: 25px;">
                         ответы: <span title="Выбрали этот ответ" style="margin: 0px 5px;">0</span> | <span style="color: green; margin: 0px 5px;" title="Уверены, что этот ответ правильный">0</span> | <span style="color: red; margin: 0px 5px;" title="Уверены, что этот ответ неправильный">0</span>
                     </div>`;
-                    $('.que').find('.ml-1').parent().append(htmlContent);
+                    $($(questionsBlocks)[i]).find('.ml-1').parent().append(htmlContent);
                 }
             }
         }
@@ -455,8 +458,8 @@
                     return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
                 } 
             }
-            else if (questionsType[questionIndex] == 'shortanswer') {
-                return el.val();;
+            else if (questionsType[questionIndex] == 'shortanswer' || questionsType[questionIndex] == "numerical") {
+                return el.val();
             }
             else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse'){
                 // todo: возможно с Latex формулами работать не будет. Стоит проверить
@@ -475,7 +478,7 @@
             // у некоторыъ типов вопросов возвращается 2 состояния: текст ответа и bool (является ли выбранным)
             // для отправки одного ответа нам состояние выбора не нужно, так как это срабатывает априори
             // когда ответ выбран
-            if (questionsType[questionIndex] != 'multichoice_checkbox' && questionsType[questionIndex] != 'shortanswer' && answerData.length == 2){
+            if (questionsType[questionIndex] != 'multichoice_checkbox' && questionsType[questionIndex] != 'shortanswer' && questionsType[questionIndex] != "numerical" && answerData.length == 2){
                 answerData = answerData[0]
             }
             console.log('Ответ отправлен: ', questionsType[questionIndex], answerData);
