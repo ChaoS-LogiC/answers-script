@@ -34,17 +34,21 @@
 
             // отправка запроса для счётчика просмотров и создания нового вопроса
             socket.emit('view_question', { 'data': { 'questions': questionsText, 'user_info': userInfo, 'room': room } });
+            // получаем сообщения чата
             socket.emit('get_chat', room);
         })
 
+        // событие вызывается при обновлении счётчика просмотров у вопроса
         socket.on('update_viewers', (data) => {
             createViewersInformation(data);
         })
 
+        // событие вызывается при обновлении каких-то ответов на сервере
         socket.on('update_answers', (data) => {
             updateAnswersInformation(data);
         })
 
+        // событие вызывается при получении нового сообщения в чате
         socket.on('add_chat_messages', (messages) => {
             addChatMessages(messages);
         })
@@ -52,10 +56,25 @@
         createAnswersInformation();
         setOnChangeListeners();
 
+        console.log(getCurrentAnswers());
+
         console.info('blocks: ', questionsBlocks);
         console.info('types: ', questionsType);
         console.info('text: ', questionsText);
         console.info('user info: ', userInfo);
+
+        // получаем все выбранные ответы со страницы
+        function getCurrentAnswers() {
+            let questions = $(questionsBlocks);
+            let answers = [];
+            for (let i = 0; i < questions.length; i++) {
+                let inputElements = $(questions[i]).find('.answer :input');
+                for (let j = 0; j < inputElements.length; j++) {
+                    answers.push(getAnswer($(inputElements[j]), i));
+                }
+            }
+            return answers;
+        }
 
         // добавляет ко всем инпутам колбэк функцию на изменение
         function setOnChangeListeners() {
@@ -383,13 +402,24 @@
         
 
         // возвращает текст ответа у инпута
-        function getAnswer(el) {
-            if (el.parent().find('input:checkbox').length > 0) {
-                // текст ответа - состояние (checked (true/false))
-                return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
+        // если у вопроса с индексом index тип такой, в котором input с 
+        // radio или checkbox, то возвращает список из двух элементов:
+        // [название, состояние выбора (checked)]
+        function getAnswer(el, index) {
+            if (questionsType[index] == 'multichoice_checkbox') {
+                if (el.parent().find('input:checkbox').length > 0) {
+                    // текст ответа - состояние (checked (true/false))
+                    return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
+                } 
+            }
+            else if (questionsType[index] == 'shortanswer') {
+                return el.val();;
+            }
+            else if (questionsType[index] == 'multichoice_checkbox' || questionsType[index] == 'multichoice' || questionsType[index] == 'truefalse'){
+                // todo: возможно с Latex формулами работать не будет. Стоит проверить
+                return [el.parent().find('.ml-1').text(), el.parent().find('input:radio').is(':checked')];
             } 
             else {
-                // todo: возможно с Latex формулами работать не будет. Стоит проверить
                 return el.parent().find('.ml-1').text();
             }
         }
@@ -397,7 +427,16 @@
         // функция, которая вызывается при изменении какого либо ответа
         // она нужна для отправки ответа на сервер
         function onAnswerChange(el, index) {
-            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[index], 'question_type': questionsType[index], 'answer': getAnswer(el), 'room': room});
+            // добавляем свой ответ
+            let answerData = getAnswer(el, index);
+            // у некоторыъ типов вопросов возвращается 2 состояния: текст ответа и bool (является ли выбранным)
+            // для отправки одного ответа нам состояние выбора не нужно, так как это срабатывает априори
+            // когда ответ выбран
+            if (questionsType[index] != 'multichoice_checkbox' && questionsType[index] != 'shortanswer' && answerData.length == 2){
+                answerData = answerData[0]
+            }
+            console.log('Ответ отправлен: ', questionsType[index], answerData);
+            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[index], 'question_type': questionsType[index], 'answer': answerData, 'room': room});
         }
     });
 })();
