@@ -403,12 +403,16 @@
                     text = $(questions[i]).find('.qtext > p').text();
                 }
 
-                let snapshotQuestionImages = document.evaluate('//*[contains(@class,"qtext")]/.//img', document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-                for (let i = 0; i < snapshotQuestionImages.snapshotLength; i++) {
-                    let questionImage = snapshotQuestionImages.snapshotItem(i)
-                    let base64Image = getBase64Image(questionImage);
-                    text += " img:" + CryptoJS.SHA256(base64Image).toString();
+                // возможно такое, что текст вопроса будет одинаковый, но картинки
+                // у вопроса различаются. Добавим на всякий случай src от img
+                const innerImages = $(questions[i]).find('.qtext > p > img');
+                if (innerImages.length > 0) {
+                    for (let index = 0; index < innerImages.length; index++) {
+                        //let image = innerImages[index].currentSrc.split('/')
+                        text += " img:" + innerImages[index].currentSrc;
+                    }
                 }
+
                 textsList.push(text);
             }
 
