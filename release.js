@@ -348,6 +348,16 @@
             return typesList;
         }
 
+        function getBase64Image(img) {
+            var canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            var dataURL = canvas.toDataURL("image/png");
+            return dataURL.replace(/^data:image\/(png|jpg);base64,/, "");
+        }
+
         // получение списка текстов всех вопросов со страницы
         function getQuestionsText() {
             let textsList = [];
@@ -361,14 +371,11 @@
                     text = $(questions[i]).find('.qtext > p').text();
                 }
 
-                // возможно такое, что текст вопроса будет одинаковый, но картинки
-                // у вопроса различаются. Добавим на всякий случай src от img
-                const innerImages = $(questions[i]).find('.qtext > p > img');
-                if (innerImages.length > 0) {
-                    for (let index = 0; index < innerImages.length; index++) {
-                        let image = innerImages[index].currentSrc.split('/')
-                        text += " " + decodeURI(image[image.length - 1]);
-                    }
+                let snapshotQuestionImages = document.evaluate('//*[contains(@class,"qtext")]/.//img', document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null );
+                for (let i = 0; i < snapshotQuestionImages.snapshotLength; i++) {
+                    let questionImage = snapshotQuestionImages.snapshotItem(i)
+                    let base64Image = getBase64Image(questionImage);
+                    text += " img:" + CryptoJS.SHA256(base64Image).toString();
                 }
                 textsList.push(text);
             }
