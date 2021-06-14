@@ -51,6 +51,8 @@
         // событие вызывается при получении нового сообщения в чате
         socket.on('add_chat_messages', (messages) => {
             addChatMessages(messages);
+            let chatMessagesBlock = $('#chat-messages');
+            chatMessagesBlock.scrollTop(chatMessagesBlock.prop("scrollHeight"));
         })
 
         createAnswersInformation();
@@ -260,21 +262,18 @@
 
             `);
 
+            let chatMessagesBlock = $('#chat-messages')
             $('#send-chat-message-icon').click(function () {
                 let message = $('#chat-input').val();
                 if (message != '') {
                     let userName = $('.usertext').text().split(' ')[0];
-                    console.log(message);
                     socket.emit('chat', { 'room': room, 'message': { 'user': userName, 'user_info': userInfo, 'text': message } });
                 }
                 $('#chat-input').val('');
-                var d = $('#chat-messages')
-                d.scrollTop(d.prop("scrollHeight"));
             });
 
             $('.chat-button').click(function () {
-                var d = $('#chat-messages')
-                d.scrollTop(d.prop("scrollHeight"));
+                chatMessagesBlock.scrollTop(chatMessagesBlock.prop("scrollHeight"));
             });
         }
 
