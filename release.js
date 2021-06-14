@@ -346,7 +346,7 @@
             $('#send-chat-message-icon').click(function () {
                 let message = $('#chat-input').val();
                 if (message != '') {
-                    let userName = $('.usertext').text().split(' ')[0];
+                    let userName = $('.usertext').text().split(' ')[1];
                     socket.emit('chat', { 'room': room, 'message': { 'user': userName, 'user_info': userInfo, 'text': message } });
                 }
                 $('#chat-input').val('');
