@@ -38,6 +38,8 @@
             socket.emit('view_question', { 'data': { 'questions': questionsText, 'user_info': userInfo, 'room': room } });
             // получаем сообщения чата
             socket.emit('get_chat', room);
+            // отправляем текущие ответы на сервер
+            updateAnswersOnDocumentReady();
         })
 
         // событие вызывается при обновлении счётчика просмотров у вопроса
@@ -57,8 +59,7 @@
             chatMessagesBlock.scrollTop(chatMessagesBlock.prop("scrollHeight"));
         })
 
-        console.log(getCurrentAnswers());
-        
+
         createAnswersInformation();
         setOnChangeListeners();
         createApprovalButtons();
@@ -86,6 +87,9 @@
               .que.multichoice .answer div.r0, .que.multichoice .answer div.r1 {
                 border-bottom: 1px solid #dee2e6 !important;
               }
+              .que.truefalse .answer div.r0, .que.truefalse .answer div.r1 {
+                border-bottom: 1px solid #dee2e6 !important;
+              }
             `);
 
             let questions = $(questionsBlocks);
@@ -96,34 +100,62 @@
             </div>
             `
             for (let i = 0; i < questions.length; i++) {
-                if(questionsType[i] != 'shortanswer' && questionsType[i] != 'numerical'){
+                if (questionsType[i] != 'shortanswer' && questionsType[i] != 'numerical') {
                     let inputElements = $(questions[i]).find('.script-answers');
                     for (let j = 0; j < inputElements.length; j++) {
-                        $(inputElements[j]).parent().parent().append(buttonsHtml);
-                        let clickElement = $($(inputElements[j]).parent().parent().find('.approval-span-btn'));
+                        let clickElement = undefined;
+                        if (questionsType[i] == 'truefalse') {
+                            $(inputElements[j]).parent().append(buttonsHtml);
+                            clickElement = $($(inputElements[j]).parent().find('.approval-span-btn'));
+                        }
+                        else {
+                            $(inputElements[j]).parent().parent().append(buttonsHtml);
+                            clickElement = $($(inputElements[j]).parent().parent().find('.approval-span-btn'));
+                        }
                         clickElement.on('click', function () {
-                            approvalAnswers($(this), i, j);
+                            approvalAnswers($(this), i);
                         })
                     }
                 }
             }
         }
-        
-        function approvalAnswers(el, questionIndex, inputAnswerIndex) {
-            console.log(el);
+
+        function approvalAnswers(el, questionIndex) {
+            let answer = getAnswer(el.parent(), questionIndex);
+
+            if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice') {
+                answer = answer[0];
+            }
+            if (el.text() == '✔') {
+                socket.emit('add_approve', { 'user_info': userInfo, 'question': questionsText[questionIndex], 'is_correct': true, 'answer': answer, 'room': room });
+            }
+            else if  (el.text() == '❌') {
+                socket.emit('add_approve', { 'user_info': userInfo, 'question': questionsText[questionIndex], 'is_correct': false, 'answer': answer, 'room': room });
+            }
         }
 
         // получаем все выбранные ответы со страницы
-        function getCurrentAnswers() {
+        function updateAnswersOnDocumentReady() {
             let questions = $(questionsBlocks);
-            let answers = [];
             for (let i = 0; i < questions.length; i++) {
                 let inputElements = $(questions[i]).find('.answer :input');
                 for (let j = 0; j < inputElements.length; j++) {
-                    answers.push(getAnswer($(inputElements[j]), i));
+                    let answer = getAnswer($(inputElements[j]), i);
+                    console.log(answer);
+                    console.log(questionsType[i]);
+                    if (questionsType[i] == 'numerical' || questionsType[i] == 'shortanswer' || questionsType[i] == 'multichoice_checkbox') {
+                        console.log('Ответ отправлен: ', questionsType[i], answer);
+                        socket.emit('add_answer', { 'user_info': userInfo, 'question': questionsText[i], 'question_type': questionsType[i], 'answer': answer, 'room': room });
+                    }
+                    else if (questionsType[i] == 'multichoice' || questionsType[i] == 'truefalse') {
+                        if (answer[1] == true) {
+                            console.log('Ответ отправлен: ', questionsType[i], answer[0]);
+                            socket.emit('add_answer', { 'user_info': userInfo, 'question': questionsText[i], 'question_type': questionsType[i], 'answer': answer[0], 'room': room });
+                        }
+                    }
                 }
             }
-            return answers;
+
         }
 
         // добавляет ко всем инпутам колбэк функцию на изменение
@@ -371,7 +403,7 @@
                     text = $(questions[i]).find('.qtext > p').text();
                 }
 
-                let snapshotQuestionImages = document.evaluate('//*[contains(@class,"qtext")]/.//img', document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null );
+                let snapshotQuestionImages = document.evaluate('//*[contains(@class,"qtext")]/.//img', document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
                 for (let i = 0; i < snapshotQuestionImages.snapshotLength; i++) {
                     let questionImage = snapshotQuestionImages.snapshotItem(i)
                     let base64Image = getBase64Image(questionImage);
@@ -447,31 +479,119 @@
             }
         }
 
+        function isAnswerInAnswers(data, answer) {
+            for (let i = 0; i < data['answers'].length; i++) {
+                if (data['answers'][i]['answer'] == answer)
+                    return true;
+            }
+            return false;
+        }
+
         // обновление блоков с информацией о выбранных ответах со скриптом
         function updateAnswersInformation(data) {
             let questions = $(questionsBlocks);
-            //
+            // проходимся по всем вопросам на странице
+            for (let i = 0; i < questions.length; i++) {
+                if (data != undefined) {
+                    // если текст вопроса равен тексту вопроса, который нам вернул сервер
+                    if (questionsText[i] == data['question']) {
+                        if (questionsType[i] != 'shortanswer' && questionsType[i] != 'numerical') {
+                            // берём все инпуты у данного вопроса
+                            let inputElements = $(questions[i]).find('.answer :input');
+                            // проходимся по всем инпутам в вопросе
+                            for (let j = 0; j < inputElements.length; j++) {
+                                // проходимся по всем вариантам ответа, которые вернул нам сервер
+                                let answer = getAnswer($(inputElements[j]), i);
+                                // берём только текст ответа, без его состояния
+                                if (questionsType[i] == 'multichoice_checkbox' || questionsType[i] == 'multichoice' || questionsType[i] == 'truefalse') {
+                                    answer = answer[0];
+                                }
+                                for (let k = 0; k < data['answers'].length; k++) {
+
+                                    // возможно, что ответ исчез, т.к. его все сняли с выбора,
+                                    // в таком случае стоит обнулить у него статистику
+                                    if (isAnswerInAnswers(data, answer)) {
+                                        let stats = $(inputElements[j]).parent().find('.script-answers > span');
+                                        // если вариант ответа равен тому, что вернул нам сервер, то обновляем его статистику
+                                        if (data['answers'][k]['answer'] == answer) {
+                                            if (stats.length == 3) {
+                                                $(stats[0]).text(data['answers'][k]['users'].length);
+                                                $(stats[1]).text(data['answers'][k]['correct'].length);
+                                                $(stats[2]).text(data['answers'][k]['not_correct'].length);
+                                            }
+                                            break;
+                                        }
+                                    }
+                                    else {
+                                        let stats = $(inputElements[j]).parent().find('.script-answers > span');
+                                        if (stats.length == 3) {
+                                            $(stats[0]).text('0');
+                                            $(stats[1]).text('0');
+                                            $(stats[2]).text('0');
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            for (let j = 0; j < data['answers'].length; j++) {
+                                if (data['answers'][j]['answer'] != '') {
+
+                                    let usersAnswers = $(questions[i]).parent().find('.user-text-answer');
+                                    let find = false;
+                                    for (let k = 0; k < usersAnswers.length; k++) {
+                                        if ($(usersAnswers[k]).text() == data['answers'][j]['answer']) {
+                                            find = true;
+                                            // если ответов с таким текстом стало 0, то удаляем данный элемент
+                                            // иначе обновляем статистику данного ответа
+                                            if (data['answers'][j]['users'].length == 0) {
+                                                $(usersAnswers[k]).parent().remove();
+                                            }
+                                            else {
+                                                let stats = $(usersAnswers[k]).parent().find('span')
+                                                $(stats[1]).text(data['answers'][j]['users'].length);
+                                            }
+                                        }
+
+                                    }
+                                    // добавляем вопрос
+                                    if (!find) {
+                                        if (data['answers'][j]['users'].length != 0) {
+                                            let htmlContent = `
+                                            <div class="script-answers" style="padding-left: 5px; position: relative; display: inline-flex; background: rgb(0 0 0 / 6%); border-radius: 4px; font-size: 15px; max-height: 25px;">
+                                                <span class="user-text-answer" style="color: black; margin: 0px 5px;">${data['answers'][j]['answer']}</span> | <span style="color: black;" title="Выбрали этот ответ" style="margin: 0px 5px;"> ${data['answers'][j]['users'].length} </span>
+                                            </div>`;
+                                            $(questions[i]).find('.script-answers').append(htmlContent);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
         }
-        
+
 
         // возвращает текст ответа у инпута
         // если у вопроса с индексом index тип такой, в котором input с 
         // radio или checkbox, то возвращает список из двух элементов:
         // [название, состояние выбора (checked)]
+        // el - .answer :input
         function getAnswer(el, questionIndex) {
             if (questionsType[questionIndex] == 'multichoice_checkbox') {
                 if (el.parent().find('input:checkbox').length > 0) {
                     // текст ответа - состояние (checked (true/false))
                     return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
-                } 
+                }
             }
             else if (questionsType[questionIndex] == 'shortanswer' || questionsType[questionIndex] == "numerical") {
                 return el.val();
             }
-            else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse'){
+            else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse') {
                 // todo: возможно с Latex формулами работать не будет. Стоит проверить
                 return [el.parent().find('.ml-1').text(), el.parent().find('input:radio').is(':checked')];
-            } 
+            }
             else {
                 return el.parent().find('.ml-1').text();
             }
@@ -485,11 +605,11 @@
             // у некоторыъ типов вопросов возвращается 2 состояния: текст ответа и bool (является ли выбранным)
             // для отправки одного ответа нам состояние выбора не нужно, так как это срабатывает априори
             // когда ответ выбран
-            if (questionsType[questionIndex] != 'multichoice_checkbox' && questionsType[questionIndex] != 'shortanswer' && questionsType[questionIndex] != "numerical" && answerData.length == 2){
+            if (questionsType[questionIndex] != 'multichoice_checkbox' && questionsType[questionIndex] != 'shortanswer' && questionsType[questionIndex] != "numerical" && answerData.length == 2) {
                 answerData = answerData[0]
             }
             console.log('Ответ отправлен: ', questionsType[questionIndex], answerData);
-            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[questionIndex], 'question_type': questionsType[questionIndex], 'answer': answerData, 'room': room});
+            socket.emit('add_answer', { 'user_info': userInfo, 'question': questionsText[questionIndex], 'question_type': questionsType[questionIndex], 'answer': answerData, 'room': room });
         }
     });
 })();
