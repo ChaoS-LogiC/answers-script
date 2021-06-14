@@ -141,8 +141,6 @@
                 let inputElements = $(questions[i]).find('.answer :input');
                 for (let j = 0; j < inputElements.length; j++) {
                     let answer = getAnswer($(inputElements[j]), i);
-                    console.log(answer);
-                    console.log(questionsType[i]);
                     if (questionsType[i] == 'numerical' || questionsType[i] == 'shortanswer' || questionsType[i] == 'multichoice_checkbox') {
                         console.log('Ответ отправлен: ', questionsType[i], answer);
                         socket.emit('add_answer', { 'user_info': userInfo, 'question': questionsText[i], 'question_type': questionsType[i], 'answer': answer, 'room': room });
@@ -562,27 +560,25 @@
         // [название, состояние выбора (checked)]
         // el - .answer :input
         function getAnswer(el, questionIndex) {
-            if (questionsType[questionIndex] == 'multichoice_checkbox') {
-                if (el.parent().find('input:checkbox').length > 0) {
-                    // текст ответа - состояние (checked (true/false))
-                    return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
-                }
-            }
-            else if (questionsType[questionIndex] == 'shortanswer' || questionsType[questionIndex] == "numerical") {
+            if (questionsType[questionIndex] == 'shortanswer' || questionsType[questionIndex] == "numerical") {
                 return el.val();
             }
             else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse') {
                 const innerImages = el.parent().find('img');
                 let answerText = el.parent().find('.ml-1').text();
-                console.log(innerImages)
                 if (innerImages.length > 0) {
                     for (let index = 0; index < innerImages.length; index++) {
-                        //let image = innerImages[index].currentSrc.split('/')
                         answerText += " img:" + innerImages[index].currentSrc;
                     }
                 }
+                // текст ответа - состояние (checked (true/false))
                 // todo: возможно с Latex формулами работать не будет. Стоит проверить
-                return [answerText, el.parent().find('input:radio').is(':checked')];
+                if (el.parent().find('input:checkbox').length > 0) {
+                    return [answerText, el.parent().find('input:checkbox').is(':checked')];
+                }
+                else {
+                    return [answerText, el.parent().find('input:radio').is(':checked')];
+                }
             }
             else {
                 return el.parent().find('.ml-1').text();
