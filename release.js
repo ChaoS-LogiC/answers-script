@@ -14,7 +14,7 @@
 // ==/UserScript==
 
 (function () {
-    $(document).ready(function () {
+    $(window).ready(function() {
         // match - вопрос на соответствие, 
         // multichoice - вопрос с множественными вариантами ответов,
         // multichoice_checkbox - множество вариантов, ответить можно несколько
@@ -29,7 +29,7 @@
         const room = CryptoJS.SHA256(questionsText[0]).toString();
         createChat();
 
-        var socket = io.connect('127.0.0.1:5000')
+        var socket = io.connect('https://mirea.ninja:5000/')
 
         socket.on('connect', () => {
             socket.emit('join', room);
@@ -537,35 +537,14 @@
                                 }
                             }
                         } else {
+                            $(questions[i]).find('.script-answers').html('');
                             for (let j = 0; j < data['answers'].length; j++) {
                                 if (data['answers'][j]['answer'] != '') {
-
-                                    let usersAnswers = $(questions[i]).parent().find('.user-text-answer');
-                                    let find = false;
-                                    for (let k = 0; k < usersAnswers.length; k++) {
-                                        if ($(usersAnswers[k]).text() == data['answers'][j]['answer']) {
-                                            find = true;
-                                            // если ответов с таким текстом стало 0, то удаляем данный элемент
-                                            // иначе обновляем статистику данного ответа
-                                            if (data['answers'][j]['users'].length == 0) {
-                                                $(usersAnswers[k]).parent().remove();
-                                            }
-                                            else {
-                                                let stats = $(usersAnswers[k]).parent().find('span')
-                                                $(stats[1]).text(data['answers'][j]['users'].length);
-                                            }
-                                        }
-
-                                    }
-                                    // добавляем вопрос
-                                    if (!find) {
-                                        if (data['answers'][j]['users'].length != 0) {
-                                            let htmlContent = `
-                                            <div class="script-answers" style="padding-left: 5px; position: relative; display: inline-flex; background: rgb(0 0 0 / 6%); border-radius: 4px; font-size: 15px; max-height: 25px;">
-                                                <span class="user-text-answer" style="color: black; margin: 0px 5px;">${data['answers'][j]['answer']}</span> | <span style="color: black;" title="Выбрали этот ответ" style="margin: 0px 5px;"> ${data['answers'][j]['users'].length} </span>
-                                            </div>`;
-                                            $(questions[i]).find('.script-answers').append(htmlContent);
-                                        }
+                                    if (data['answers'][j]['users'].length != 0) {
+                                        let htmlContent = `
+                                        <div><span class="user-text-answer" style="color: black; margin: 0px 5px;">${data['answers'][j]['answer']}</span> | <span style="color: black;" title="Выбрали этот ответ" style="margin: 0px 5px;"> ${data['answers'][j]['users'].length} </span></div>
+                                        `;
+                                        $(questions[i]).find('.script-answers').append(htmlContent);
                                     }
                                 }
                             }
@@ -593,8 +572,17 @@
                 return el.val();
             }
             else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse') {
+                const innerImages = el.parent().find('img');
+                let answerText = el.parent().find('.ml-1').text();
+                console.log(innerImages)
+                if (innerImages.length > 0) {
+                    for (let index = 0; index < innerImages.length; index++) {
+                        //let image = innerImages[index].currentSrc.split('/')
+                        answerText += " img:" + innerImages[index].currentSrc;
+                    }
+                }
                 // todo: возможно с Latex формулами работать не будет. Стоит проверить
-                return [el.parent().find('.ml-1').text(), el.parent().find('input:radio').is(':checked')];
+                return [answerText, el.parent().find('input:radio').is(':checked')];
             }
             else {
                 return el.parent().find('.ml-1').text();
