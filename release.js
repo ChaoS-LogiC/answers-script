@@ -55,15 +55,59 @@
             chatMessagesBlock.scrollTop(chatMessagesBlock.prop("scrollHeight"));
         })
 
+        console.log(getCurrentAnswers());
+        
         createAnswersInformation();
         setOnChangeListeners();
+        createApprovalButtons();
 
-        console.log(getCurrentAnswers());
 
         console.info('blocks: ', questionsBlocks);
         console.info('types: ', questionsType);
         console.info('text: ', questionsText);
         console.info('user info: ', userInfo);
+
+        function createApprovalButtons() {
+            GM_addStyle(`
+              .approval-btn-group {
+                margin-right: 5px;
+                float: right;
+                clear: both;
+              }
+              .approval-span-btn {
+                font-size: 15px;
+              }
+              .approval-span-btn:hover {
+                cursor: pointer;
+              }
+              .que.multichoice .answer div.r0, .que.multichoice .answer div.r1 {
+                border-bottom: 1px solid #dee2e6 !important;
+              }
+            `);
+
+            let questions = $(questionsBlocks);
+            let buttonsHtml = `
+            <div class="approval-btn-group" ">
+                <span class="approval-span-btn" title="Я уверен(а), что этот ответ правильный">✔</span>
+                <span class="approval-span-btn" title="Я уверен(а), что этот ответ неправильный">❌</span>
+            </div>
+            `
+            for (let i = 0; i < questions.length; i++) {
+                if(questionsType[i] != 'shortanswer'){
+                    let inputElements = $(questions[i]).find('.script-answers');
+                    for (let j = 0; j < inputElements.length; j++) {
+                        $(inputElements[j]).append(buttonsHtml);
+                        $($(inputElements[j]).parent().find('.approval-span-btn')).on('click', function () {
+                            approvalAnswers($(this), i, j);
+                        })
+                    }
+                }
+            }
+        }
+        
+        function approvalAnswers(el, questionIndex, inputAnswerIndex) {
+            console.log(el);
+        }
 
         // получаем все выбранные ответы со страницы
         function getCurrentAnswers() {
@@ -361,7 +405,6 @@
                 let html = `<div class="script-answer-viewers" style="color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;">Просмотров со скриптом: ${data['data'][i]['viewers'].length}</div>`
                 for (let j = 0; j < questionsText.length; j++) {
                     if (data['data'][i]['question'] == questionsText[j]) {
-                        console.log('+')
                         if ($($('.que')[j]).find('.script-answer-viewers').length > 0) {
                             $($('.que')[j]).find('.script-answer-viewers').innerHTML = html;
                         }
@@ -384,11 +427,11 @@
                         style: 'color: red; padding-left: 5px; position: relative; background: rgb(0 0 0 / 6%); border-radius: 4px;'
                     }).appendTo($('.que').find('.formulation'));
                 } else {
-                    $('<div/>', {
-                        "class": 'script-answers',
-                        text: 'Выбрало этот ответ: 0',
-                        style: 'color: red; padding-left: 5px; position: relative; width: 120px; background: rgb(0 0 0 / 6%); border-radius: 4px;'
-                    }).appendTo($('.que').find('.ml-1').parent());
+                    let htmlContent = `
+                    <div class="script-answers" style="padding-left: 5px; position: relative; display: inline-flex; background: rgb(0 0 0 / 6%); border-radius: 4px; font-size: 15px;">
+                        ответы: <span title="Выбрали этот ответ" style="margin: 0px 5px;">0</span> | <span style="color: green; margin: 0px 5px;" title="Уверены, что этот ответ правильный">0</span> | <span style="color: red; margin: 0px 5px;" title="Уверены, что этот ответ неправильный">0</span>
+                    </div>`;
+                    $('.que').find('.ml-1').parent().append(htmlContent);
                 }
             }
         }
@@ -404,17 +447,17 @@
         // если у вопроса с индексом index тип такой, в котором input с 
         // radio или checkbox, то возвращает список из двух элементов:
         // [название, состояние выбора (checked)]
-        function getAnswer(el, index) {
-            if (questionsType[index] == 'multichoice_checkbox') {
+        function getAnswer(el, questionIndex) {
+            if (questionsType[questionIndex] == 'multichoice_checkbox') {
                 if (el.parent().find('input:checkbox').length > 0) {
                     // текст ответа - состояние (checked (true/false))
                     return [el.parent().find('.ml-1').text(), el.parent().find('input:checkbox').is(':checked')];
                 } 
             }
-            else if (questionsType[index] == 'shortanswer') {
+            else if (questionsType[questionIndex] == 'shortanswer') {
                 return el.val();;
             }
-            else if (questionsType[index] == 'multichoice_checkbox' || questionsType[index] == 'multichoice' || questionsType[index] == 'truefalse'){
+            else if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse'){
                 // todo: возможно с Latex формулами работать не будет. Стоит проверить
                 return [el.parent().find('.ml-1').text(), el.parent().find('input:radio').is(':checked')];
             } 
@@ -425,17 +468,17 @@
 
         // функция, которая вызывается при изменении какого либо ответа
         // она нужна для отправки ответа на сервер
-        function onAnswerChange(el, index) {
+        function onAnswerChange(el, questionIndex) {
             // добавляем свой ответ
-            let answerData = getAnswer(el, index);
+            let answerData = getAnswer(el, questionIndex);
             // у некоторыъ типов вопросов возвращается 2 состояния: текст ответа и bool (является ли выбранным)
             // для отправки одного ответа нам состояние выбора не нужно, так как это срабатывает априори
             // когда ответ выбран
-            if (questionsType[index] != 'multichoice_checkbox' && questionsType[index] != 'shortanswer' && answerData.length == 2){
+            if (questionsType[questionIndex] != 'multichoice_checkbox' && questionsType[questionIndex] != 'shortanswer' && answerData.length == 2){
                 answerData = answerData[0]
             }
-            console.log('Ответ отправлен: ', questionsType[index], answerData);
-            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[index], 'question_type': questionsType[index], 'answer': answerData, 'room': room});
+            console.log('Ответ отправлен: ', questionsType[questionIndex], answerData);
+            socket.emit('add_answer', {'user_info': userInfo, 'question': questionsText[questionIndex], 'question_type': questionsType[questionIndex], 'answer': answerData, 'room': room});
         }
     });
 })();
