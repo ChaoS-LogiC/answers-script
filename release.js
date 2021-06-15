@@ -15,6 +15,14 @@
 
 (function () {
     $(window).ready(function() {
+        if(document.body.classList.contains("quiz-secure-window")) {
+            window.addEventListener("mousedown", function (event) { event.stopPropagation();}, true);
+            window.addEventListener("dragstart", function (event) { event.stopPropagation(); }, true);
+            window.addEventListener("contextmenu", function (event) { event.stopPropagation(); }, true);
+            window.addEventListener('copy', function (event) { event.stopPropagation(); }, true);
+            window.addEventListener('beforeprint', function (event) { event.stopPropagation(); }, true);
+        }
+        
         // match - вопрос на соответствие, 
         // multichoice - вопрос с множественными вариантами ответов,
         // multichoice_checkbox - множество вариантов, ответить можно несколько
