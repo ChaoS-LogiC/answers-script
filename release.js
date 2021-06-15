@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Mirea Ninja Answers
 // @namespace    https://mirea.ninja/
-// @version      1.0
+// @version      1.1
 // @description  online test answers!
 // @author       admin
 // @match        https://online-edu.mirea.ru/*
-// @match        http://oniel.beget.tech/*
+// @updateURL    https://raw.githubusercontent.com/Ninja-Official/answers-script/main/release.js
+// @downloadURL  https://raw.githubusercontent.com/Ninja-Official/answers-script/main/release.js
+// @supportURL   https://mirea.ninja/t/novaya-versiya-skripta-dlya-obmena-otvetami-v-testirovaniya-v-sdo/486
 // @require      https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.min.js
@@ -25,10 +27,10 @@
             window.addEventListener('beforeprint', function (event) { event.stopPropagation(); }, true);
         }
 
-        // match - вопрос на соответствие, 
+        // match - вопрос на соответствие,
         // multichoice - вопрос с множественными вариантами ответов,
         // multichoice_checkbox - множество вариантов, ответить можно несколько
-        // shortanswer - вписать короткий ответ, 
+        // shortanswer - вписать короткий ответ,
         // numerical - коротки ответ в виде числа,
         // truefalse - вопрос на верно/неверно
         var questionsBlocks = '.que';
@@ -428,7 +430,7 @@
         }
 
         // добавляет сообщения в чат
-        // параметр message - список сообщений. 
+        // параметр message - список сообщений.
         // Пример: [{'user': 'Max', 'user_info': 'qwr1wt1g233', 'text': 'тестовое сообщение'}, ...]
         function addChatMessages(messages) {
             let chatMessages = $('#chat-messages')
@@ -565,7 +567,7 @@
 
 
         // возвращает текст ответа у инпута
-        // если у вопроса с индексом index тип такой, в котором input с 
+        // если у вопроса с индексом index тип такой, в котором input с
         // radio или checkbox, то возвращает список из двух элементов:
         // [название, состояние выбора (checked)]
         // el - .answer :input
