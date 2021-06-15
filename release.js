@@ -5,7 +5,6 @@
 // @description  online test answers!
 // @author       admin
 // @match        https://online-edu.mirea.ru/*
-// @match        http://oniel.beget.tech/*
 // @require      https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.min.js
