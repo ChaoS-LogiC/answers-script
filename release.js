@@ -16,6 +16,7 @@
 (function () {
     'use strict';
     $(window).ready(function() {
+        if(!$(".que").length) return;
         if(document.body.classList.contains("quiz-secure-window")) {
             window.addEventListener("mousedown", function (event) { event.stopPropagation();}, true);
             window.addEventListener("dragstart", function (event) { event.stopPropagation(); }, true);
