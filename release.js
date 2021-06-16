@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Mirea Ninja Answers
 // @namespace    https://mirea.ninja/
-// @version      1.1
+// @version      1.1.2
 // @description  online test answers!
 // @author       admin
-// @match        https://online-edu.mirea.ru/*
+// @match        *://*/*
 // @updateURL    https://raw.githubusercontent.com/Ninja-Official/answers-script/main/release.js
 // @downloadURL  https://raw.githubusercontent.com/Ninja-Official/answers-script/main/release.js
 // @supportURL   https://mirea.ninja/t/novaya-versiya-skripta-dlya-obmena-otvetami-v-testirovaniya-v-sdo/486
@@ -17,10 +17,10 @@
 
 (function () {
     'use strict';
-    $(window).ready(function() {
-        if(!$(".que").length) return;
-        if(document.body.classList.contains("quiz-secure-window")) {
-            window.addEventListener("mousedown", function (event) { event.stopPropagation();}, true);
+    $(window).ready(function () {
+        if (!$(".que").length) return;
+        if (document.body.classList.contains("quiz-secure-window")) {
+            window.addEventListener("mousedown", function (event) { event.stopPropagation(); }, true);
             window.addEventListener("dragstart", function (event) { event.stopPropagation(); }, true);
             window.addEventListener("contextmenu", function (event) { event.stopPropagation(); }, true);
             window.addEventListener('copy', function (event) { event.stopPropagation(); }, true);
@@ -134,14 +134,13 @@
 
         function approvalAnswers(el, questionIndex) {
             let answer = getAnswer(el.parent(), questionIndex);
-
-            if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice') {
+            if (questionsType[questionIndex] == 'multichoice_checkbox' || questionsType[questionIndex] == 'multichoice' || questionsType[questionIndex] == 'truefalse') {
                 answer = answer[0];
             }
             if (el.text() == '✔') {
                 socket.emit('add_approve', { 'user_info': userInfo, 'question': questionsText[questionIndex], 'is_correct': true, 'answer': answer, 'room': room });
             }
-            else if  (el.text() == '❌') {
+            else if (el.text() == '❌') {
                 socket.emit('add_approve', { 'user_info': userInfo, 'question': questionsText[questionIndex], 'is_correct': false, 'answer': answer, 'room': room });
             }
         }
